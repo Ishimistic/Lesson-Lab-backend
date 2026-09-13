@@ -106,7 +106,7 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "http://localhost:3000","https://lessonlab-five.vercel.app"
 ]
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
