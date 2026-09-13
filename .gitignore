@@ -1,0 +1,15 @@
+venv/
+.env
+
+__pycache__/
+*.py[cod]
+
+db.sqlite3
+
+.idea/
+.vscode/
+
+.DS_Store
+
+outputs/final_lesson.md
+outputs/rejection_log.json
