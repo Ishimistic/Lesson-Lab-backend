@@ -1,406 +1,166 @@
-# Self-Evaluating RAG Lesson Generator
-
-An agentic educational content system built with Django, LangChain, Python, and an LLM.
-
-The system generates a beginner-friendly lesson, evaluates it against a strict pass/fail rubric, regenerates rejected lessons using evaluator feedback, and stores recurring failure patterns as persistent memory.
+# Self-Evaluating Lesson Content Generator
 
 ## Objective
 
-The system takes a topic such as:
+Build an AI-powered system that takes a technical topic and automatically generates a standalone, beginner-friendly lesson, evaluates the lesson against a strict quality rubric, and regenerates it when the lesson fails.
 
-"Introduction to RAG"
+The target learner is a 12th-grade graduate in India with limited English and no prior AI knowledge.
 
-and produces a standalone beginner lesson for a learner with:
+## Core Workflow
 
-- no prior knowledge of AI
-- limited English vocabulary
-- a non-English-medium educational background
-- a goal of beginning an AI career
-
-The system does not require human interaction during regeneration.
-
-## Workflow
 ```bash
 User
   │
   │ topic
   ▼
-Django API
+Next.js frontend
   │
   ▼
-Lesson Generator
+POST /api/lessons/generate/
   │
   ▼
-Lesson Evaluator
+Django REST API
   │
   ▼
-Is the lesson good enough?
-  │
-  ├────────────── YES ──────────────► Final Output
-  │
-  NO
+Lesson generation
   │
   ▼
-Log Rejection
+Evaluation
   │
   ▼
-Update Persistent Memory
+Regeneration if required
   │
   ▼
-Regenerate Using Evaluator Feedback
+Final JSON response
   │
   ▼
-Evaluate Again
+Next.js frontend
   │
-  └──────────────► PASS / Retry
+  ▼
+Rendered lesson
++ Evaluation
++ Rejection history
 ```
 
-Maximum retries are bounded to two.
+The workflow allows a maximum of 2 retries (maximum 3 generation attempts).
 
-## Quality Rubric
+## Evaluation Rubric
 
-The evaluator checks:
+Every generated lesson is evaluated on six dimensions:
 
-1. Accuracy
-The lesson must contain factually correct explanations and examples without misleading claims.
+1. Accuracy — technically correct, no misleading claims, valid examples.
+2. Beginner-friendly — understandable to the target learner.
+3. Examples — concrete and technically valid examples are provided.
+4. Jargon — technical terms are explained before or when they are used.
+5. Coverage — explains what the topic is, why it matters, and how it works.
+6. Flow — logical progression from basic ideas to examples and recap.
 
-2. Beginner friendliness
-The lesson must be understandable to someone starting from zero and should use simple, clear language.
-
-3. Examples
-The lesson must contain at least one concrete example that helps explain the topic.
-
-4. Jargon
-Important technical terms must be explained before the learner is expected to understand them.
-
-5. Coverage
-The lesson must explain:
-- What the topic is
-- Why it matters
-- How it works
-
-6. Teaching flow
-The lesson should move logically from simple concepts to more detailed concepts and end with a useful recap.
-
-
-Every criterion is PASS or FAIL.
-
-Partial credit is not allowed.
-
-## Architecture
-
-Django is responsible for:
-
-- API endpoints
-- reuest handling
-- request validation
-- database persistence
-
-
-LangChain is responsible for:
-
-- Prompt construction
-- LLM interaction
-- lesson generation
-- structured evaluation output
-
-Groq
-Groq provides the model inference used by the generator and evaluator.
-
-The current model configuration is:
+The evaluator produces structured results with:
 ```bash
-openai/gpt-oss-20b
+passed
+reason
+feedback
 ```
+for each rubric category.
 
-Python controls:
+## Self-Correction
 
-- Workflow orchestration
-- Retry logic
-- Termination conditions
-- Rubric aggregation
-- Memory updates
-- Rejection logging
-- Output generation
-
-
-## Project Structure 
+When an attempt fails:
 ```bash
-rag_lesson_generator/
-│
-├── manage.py
-│
-├── config/
-│   ├── settings.py
-│   ├── urls.py
-│   ├── asgi.py
-│   └── wsgi.py
-│
-├── lesson/
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── urls.py
-│   ├── views.py
-│   │
-│   ├── services/
-│   │   ├── generator.py
-│   │   ├── evaluator.py
-│   │   ├── memory.py
-│   │   ├── workflow.py
-│   │   ├── logger.py
-│   │   └── llm.py
-│   │
-│   ├── prompts/
-│   │   ├── generator.py
-│   │   └── evaluator.py
-│   │
-│   └── schemas/
-│       └── evaluation.py
-│
-├── outputs/
-│   ├── final_lesson.md
-│   └── rejection_log.json
-│
-├── run_generator.py
-├── run_evaluator.py
-├── run_demo.py
-│
-├── .env.example
-├── .gitignore
-├── requirements.txt
-└── README.md
+Evaluator feedback
+       +
+Previous lesson
+       +
+Memory of previous failures
+       ↓
+Regenerator
 ```
 
+The system then produces a revised lesson and evaluates it again.
 
-## Core Components
-### generator.py
-
-Generates the lesson using the topic, persistent memory, and evaluator feedback.
-
-On regeneration, the previous lesson and failed evaluation feedback are passed back to the generator so that it can improve the content.
-
-### evaluator.py
-
-Evaluates the lesson against the six hard rubric criteria and returns structured results using a Pydantic schema.
-
-### workflow.py
-
-Orchestrates the complete generate → evaluate → regenerate loop.
-
-### memory.py
-
-Stores recurring evaluator failures and retrieves previous lessons learned for future generations.
-
-### logger.py
-
-Persists every evaluation attempt, including:
-- Attempt number
-- Pass/fail status
-- Failed checks
-- Evaluator feedback
-- Changes applied during regeneration
-
-### llm.py
-Centralizes the Groq model configuration so the rest of the application does not depend directly on provider-specific configuration.
+The rejection log records:
+```bash
+Attempt
+Status
+Failed checks
+Evaluator feedback
+Changes made
+```
 
 
 ## Persistent Memory
 
-The system stores recurring evaluator failures in the database.
+The system stores recurring failure patterns in the database.
 
 For example:
-
-- unexplained technical jargon
-- weak examples
-- missing topic coverage
-
-These lessons are passed into future generations. 
-
-This allows the system to learn from repeated failures across different executions instead of treating every run independently.
-
-
-
-## Data Models
-
-### LessonRun
-
-Stores one complete generation workflow.
-
-### EvaluationLog
-
-Stores each evaluation attempt.
-
-### Memory
-
-Stores recurring lessons learned from previous failures.
-
-
-## API
-
-### Generate a lesson
-
-POST:
-
-`/api/lessons/generate/`
-
-Request:
-
-```json
-{
-    "topic": "Introduction to RAG"
-}
-```
-
-Example Response
-```json
-{
-    "status": "passed",
-    "topic": "Introduction to RAG",
-    "attempts": 2,
-    "lesson": "...",
-    "rejection_log": [
-        {
-            "attempt": 1,
-            "status": "REJECTED",
-            "failed_checks": [
-                "accuracy",
-                "jargon"
-            ],
-            "feedback": [
-                "Correct the inaccurate explanation of RAG.",
-                "Explain technical terms before using them."
-            ],
-            "changes_made": [
-                "Applied evaluator feedback to correct the factual explanation.",
-                "Added a beginner-friendly explanation of technical terminology."
-            ]
-        },
-        {
-            "attempt": 2,
-            "status": "PASSED",
-            "failed_checks": [],
-            "feedback": [],
-            "changes_made": []
-        }
-    ]
-}
-```
-
-
-## Setup
-1. Create a virtual environment
-
-Windows:
 ```bash
-python -m venv venv
+Failure type:
+Incorrect technical simplification
+
+Lesson learned:
+Do not replace an established technical definition
+with an oversimplified but incorrect explanation.
 ```
-
-Activate it:
-```bash
-venv\Scripts\activate
-```
-
-2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-3. Configure environment variables
-
-Create .env from .env.example.
-
-Example:
-```bash
-DJANGO_SECRET_KEY=your-secret-key
-DEBUG=True
-ALLOWED_HOSTS=127.0.0.1,localhost
-
-GROQ_API_KEY=your-groq-api-key
-
-LLM_MODEL=openai/gpt-oss-20b
-
-MAX_LESSON_RETRIES=2
-```
-
-4. Apply migrations
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-5. Start the server
-```bash
-python manage.py runserver
-```
-
-The API will be available at:
-```bash
-http://127.0.0.1:8000/
-```
-Running the Application
-
-The main application is the Django API.
-
-Send:
-```bash
-POST /api/lessons/generate/
-```
-with:
-```bash
-{
-    "topic": "Introduction to RAG"
-}
-```
-
-The complete generation, evaluation, regeneration, memory, and logging workflow runs automatically inside the application.
+This memory is reused in future generations so the system can improve across runs.
 
 
-## Development and Demonstration Scripts
+## Technology Stack
 
-The repository also contains small scripts for testing individual parts of the system.
+#### Backend
 
-#### run_generator.py
+- Django
+- Django REST Framework
+- Python
+- LangChain
+- Groq
+- SQLite
 
-Makes a real LLM call and demonstrates that the generator can produce a lesson.
-```bash
-python run_generator.py
-```
-#### run_evaluator.py
+#### Frontend
 
-Sends a test lesson to the real evaluator and demonstrates the pass/fail rubric and regeneration feedback.
+- Next.js
+- TypeScript
+- React
+- Tailwind CSS
+- React Markdown
 
-```bash
-python run_evaluator.py
-```
+The frontend provides:
 
-#### run_demo.py
+- Topic input
+- Generated lesson viewer
+- Evaluation results
+- Attempt/rejection history
+- Changes made during regeneration
 
-Runs the complete end-to-end workflow with a deliberately injected factual error.
 
-This is intended to demonstrate:
 
-```bash
-Generate
-→ Deliberate Error
-→ Evaluate
-→ Reject
-→ Store Feedback
-→ Regenerate
-→ Evaluate
-→ Pass
-```
+## Future Improvements
+#### 1. Dynamic evidence retrieval
+Retrieve reliable, topic-specific information before generation instead of depending entirely on the model's internal knowledge.
 
-Run:
-```bash
-python run_demo.py
-```
+#### 2. Evidence-based evaluation
+Evaluate important technical claims against the retrieved evidence rather than asking the LLM only whether the lesson “sounds accurate.”
 
-The deliberate error is used only for demonstration and is not part of the normal API workflow.
+#### 3. Claim-level fact checking
+Extract important claims from the generated lesson and verify each claim individually. This makes it easier to identify exactly what is wrong.
 
-## Output Files
-### outputs/final_lesson.md
+#### 4. Source reliability ranking
+Prefer authoritative sources such as official documentation, universities, government organizations, and established technical references over arbitrary web pages.
 
-Contains the final lesson produced by the workflow.
+#### 5. Adaptive regeneration
+Instead of simply sending all feedback back to the generator, regenerate specifically around the failed criteria. For example, an accuracy failure should trigger factual correction rather than a complete rewrite.
 
-### outputs/rejection_log.json
+#### 6. Improved long-term memory
+Store recurring failure patterns and use them to improve future generations, while keeping factual knowledge separate from lessons learned about generation quality.
 
-Contains the evaluation history for the run, including rejected attempts, evaluator feedback, and regeneration changes.
+#### 7. Human review option
+For high-risk or highly technical topics, allow a human to review the lesson before it is marked as final.
+
+#### 8. Better source management
+Store the sources used for a lesson along with the final output so users can see where the factual information came from.
+
+#### 9. Caching retrieved evidence
+Cache evidence for recently requested topics to reduce repeated retrieval and improve response time.
+
+#### 10. Multi-source verification
+For important technical claims, compare information from multiple independent sources before accepting the claim.
+
