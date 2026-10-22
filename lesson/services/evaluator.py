@@ -1,22 +1,9 @@
 from langchain_core.prompts import ChatPromptTemplate
 
-from ..prompts.evaluator import EVALUATOR_SYSTEM_PROMPT
+from ..prompts.evaluator import EVALUATOR_SYSTEM_PROMPT, EVALUATOR_HUMAN_PROMPT
 from ..schemas.evaluation import EvaluationResult
 
 from .llm import get_llm
-
-
-EVALUATOR_HUMAN_PROMPT = """
-Evaluate the following lesson.
-
-TOPIC
------
-{topic}
-
-LESSON
-------
-{lesson}
-"""
 
 
 def _build_evaluator_chain():

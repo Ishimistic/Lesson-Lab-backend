@@ -1,11 +1,9 @@
 from langchain_core.prompts import ChatPromptTemplate
 from django.conf import settings
-
 from ..prompts.generator import (
     GENERATOR_HUMAN_PROMPT,
     GENERATOR_SYSTEM_PROMPT,
 )
-
 from .llm import get_llm
 
 

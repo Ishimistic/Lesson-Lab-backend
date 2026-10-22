@@ -74,3 +74,16 @@ For every failed criterion:
 Do not be generous.
 A hard criterion must clearly pass.
 """
+
+
+EVALUATOR_HUMAN_PROMPT = """
+Evaluate the following lesson.
+
+TOPIC
+-----
+{topic}
+
+LESSON
+------
+{lesson}
+"""

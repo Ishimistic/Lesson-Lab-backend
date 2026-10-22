@@ -13,19 +13,14 @@ class LessonRun(models.Model):
     ]
 
     topic = models.CharField(max_length=255)
-
     final_lesson = models.TextField(blank=True)
-
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default=STATUS_RUNNING,
     )
-
     attempts = models.PositiveIntegerField(default=0)
-
     created_at = models.DateTimeField(auto_now_add=True)
-
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -40,14 +35,10 @@ class EvaluationLog(models.Model):
     )
 
     attempt_number = models.PositiveIntegerField()
-
     passed = models.BooleanField()
-
-    evaluation = models.JSONField()
-
-    failed_checks = models.JSONField(default=list)
-
-    regeneration_feedback = models.JSONField(default=list)
+    evaluation = models.JSONField() # Stores complete evaluator result
+    failed_checks = models.JSONField(default=list) # Stores only criteria that failed 
+    regeneration_feedback = models.JSONField(default=list) # Stores specific instruction to improve the next generation
     changes_made = models.JSONField(default=list)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -67,13 +58,9 @@ class Memory(models.Model):
         max_length=100,
         unique=True,
     )
-
-    lesson_learned = models.TextField()
-
+    lesson_learned = models.TextField() # Stores the lesson learned from the failure
     occurrence_count = models.PositiveIntegerField(default=1)
-
     created_at = models.DateTimeField(auto_now_add=True)
-
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -1,24 +1,18 @@
 import json
 from pathlib import Path
-
 from django.conf import settings
-
 from ..models import LessonRun
-
 from .evaluator import (
     evaluate_lesson,
     evaluation_passed,
     get_failed_checks,
     get_regeneration_feedback,
 )
-
 from .generator import generate_lesson
-
 from .logger import (
     build_rejection_log,
     save_evaluation_log,
 )
-
 from .memory import (
     build_memory_context,
     update_memory,
@@ -98,9 +92,7 @@ def run_lesson_workflow(topic: str,  inject_demo_error: bool = False,) -> dict:
         topic=topic,
         status=LessonRun.STATUS_RUNNING,
     )
-
     memory_context = build_memory_context()
-
     lesson = generate_lesson(
         topic=topic,
         memory_context=memory_context,
@@ -112,26 +104,21 @@ def run_lesson_workflow(topic: str,  inject_demo_error: bool = False,) -> dict:
     max_attempts = settings.MAX_LESSON_RETRIES + 1
 
     for attempt in range(1, max_attempts + 1):
-
         evaluation = evaluate_lesson(
             topic=topic,
             lesson=lesson,
         )
-
         passed = evaluation_passed(
             evaluation
         )
-
         failed_checks = get_failed_checks(
             evaluation
         )
-
         regeneration_feedback = (
             get_regeneration_feedback(
                 evaluation
             )
         )
-
         evaluation_log = save_evaluation_log(
             lesson_run=lesson_run,
             attempt_number=attempt,
